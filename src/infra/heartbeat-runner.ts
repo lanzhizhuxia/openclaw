@@ -104,7 +104,8 @@ export type HeartbeatSummary = {
 const DEFAULT_HEARTBEAT_TARGET = "none";
 export { isCronSystemEvent };
 
-type HeartbeatAgentState = {
+// fork: heartbeat-status-rpc — exported for RPC handler
+export type HeartbeatAgentState = {
   agentId: string;
   heartbeat?: HeartbeatConfig;
   intervalMs: number;
@@ -115,6 +116,8 @@ type HeartbeatAgentState = {
 export type HeartbeatRunner = {
   stop: () => void;
   updateConfig: (cfg: OpenClawConfig) => void;
+  // fork: heartbeat-status-rpc — read-only snapshot for UI status display
+  getAgentStates: () => ReadonlyMap<string, HeartbeatAgentState>;
 };
 
 function hasExplicitHeartbeatAgents(cfg: OpenClawConfig) {
@@ -632,6 +635,10 @@ export async function runHeartbeatOnce(opts: {
     return { status: "skipped", reason: "disabled" };
   }
 
+  // fork: heartbeat-status-rpc — tag every event with the running agent
+  const emit = (evt: Omit<Parameters<typeof emitHeartbeatEvent>[0], "agentId">) =>
+    emitHeartbeatEvent({ ...evt, agentId });
+
   const startedAt = opts.deps?.nowMs?.() ?? Date.now();
   if (!isWithinActiveHours(cfg, heartbeat, startedAt)) {
     return { status: "skipped", reason: "quiet-hours" };
@@ -651,7 +658,7 @@ export async function runHeartbeatOnce(opts: {
     reason: opts.reason,
   });
   if (preflight.skipReason) {
-    emitHeartbeatEvent({
+    emit({
       status: "skipped",
       reason: preflight.skipReason,
       durationMs: Date.now() - startedAt,
@@ -735,7 +742,7 @@ export async function runHeartbeatOnce(opts: {
     SessionKey: runSessionKey,
   };
   if (!visibility.showAlerts && !visibility.showOk && !visibility.useIndicator) {
-    emitHeartbeatEvent({
+    emit({
       status: "skipped",
       reason: "alerts-disabled",
       durationMs: Date.now() - startedAt,
@@ -822,7 +829,7 @@ export async function runHeartbeatOnce(opts: {
       // Prune the transcript to remove HEARTBEAT_OK turns
       await pruneHeartbeatTranscript(transcriptState);
       const okSent = await maybeSendHeartbeatOk();
-      emitHeartbeatEvent({
+      emit({
         status: "ok-empty",
         reason: opts.reason,
         durationMs: Date.now() - startedAt,
@@ -858,7 +865,7 @@ export async function runHeartbeatOnce(opts: {
       // Prune the transcript to remove HEARTBEAT_OK turns
       await pruneHeartbeatTranscript(transcriptState);
       const okSent = await maybeSendHeartbeatOk();
-      emitHeartbeatEvent({
+      emit({
         status: "ok-token",
         reason: opts.reason,
         durationMs: Date.now() - startedAt,
@@ -895,7 +902,7 @@ export async function runHeartbeatOnce(opts: {
       });
       // Prune the transcript to remove duplicate heartbeat turns
       await pruneHeartbeatTranscript(transcriptState);
-      emitHeartbeatEvent({
+      emit({
         status: "skipped",
         reason: "duplicate",
         preview: normalized.text.slice(0, 200),
@@ -916,7 +923,7 @@ export async function runHeartbeatOnce(opts: {
       : normalized.text;
 
     if (delivery.channel === "none" || !delivery.to) {
-      emitHeartbeatEvent({
+      emit({
         status: "skipped",
         reason: delivery.reason ?? "no-target",
         preview: previewText?.slice(0, 200),
@@ -933,7 +940,7 @@ export async function runHeartbeatOnce(opts: {
         sessionKey,
         updatedAt: previousUpdatedAt,
       });
-      emitHeartbeatEvent({
+      emit({
         status: "skipped",
         reason: "alerts-disabled",
         preview: previewText?.slice(0, 200),
@@ -955,7 +962,7 @@ export async function runHeartbeatOnce(opts: {
         deps: opts.deps,
       });
       if (!readiness.ok) {
-        emitHeartbeatEvent({
+        emit({
           status: "skipped",
           reason: readiness.reason,
           preview: previewText?.slice(0, 200),
@@ -1007,7 +1014,7 @@ export async function runHeartbeatOnce(opts: {
       }
     }
 
-    emitHeartbeatEvent({
+    emit({
       status: "sent",
       to: delivery.to,
       preview: previewText?.slice(0, 200),
@@ -1020,7 +1027,7 @@ export async function runHeartbeatOnce(opts: {
     return { status: "ran", durationMs: Date.now() - startedAt };
   } catch (err) {
     const reason = formatErrorMessage(err);
-    emitHeartbeatEvent({
+    emit({
       status: "failed",
       reason,
       durationMs: Date.now() - startedAt,
@@ -1268,5 +1275,6 @@ export function startHeartbeatRunner(opts: {
 
   opts.abortSignal?.addEventListener("abort", cleanup, { once: true });
 
-  return { stop: cleanup, updateConfig };
+  // fork: heartbeat-status-rpc
+  return { stop: cleanup, updateConfig, getAgentStates: () => state.agents };
 }

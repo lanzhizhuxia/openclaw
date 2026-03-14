@@ -275,6 +275,14 @@ export class OpenClawApp extends LitElement {
   @state() agentSkillsReport: SkillStatusReport | null = null;
   @state() agentSkillsAgentId: string | null = null;
 
+  // fork: heartbeat-status-rpc
+  @state() heartbeatLoading = false;
+  @state() heartbeatError: string | null = null;
+  @state() heartbeatStatus:
+    | import("./controllers/agent-heartbeat.ts").HeartbeatStatusResult
+    | null = null;
+  heartbeatPollingTimer: ReturnType<typeof setInterval> | null = null;
+
   @state() sessionsLoading = false;
   @state() sessionsResult: SessionsListResult | null = null;
   @state() sessionsError: string | null = null;

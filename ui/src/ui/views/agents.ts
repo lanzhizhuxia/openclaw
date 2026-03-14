@@ -1,4 +1,6 @@
 import { html, nothing } from "lit";
+// fork: heartbeat-status-rpc
+import type { HeartbeatStatusResult } from "../controllers/agent-heartbeat.ts";
 import type {
   AgentIdentityResult,
   AgentsFilesListResult,
@@ -10,6 +12,8 @@ import type {
   ToolsCatalogResult,
 } from "../types.ts";
 import { renderAgentOverview } from "./agents-panels-overview.ts";
+// fork: heartbeat-status-rpc
+import { renderAgentHeartbeat } from "./agents-panel-heartbeat.ts";
 import {
   renderAgentFiles,
   renderAgentChannels,
@@ -18,7 +22,15 @@ import {
 import { renderAgentTools, renderAgentSkills } from "./agents-panels-tools-skills.ts";
 import { agentBadgeText, buildAgentContext, normalizeAgentLabel } from "./agents-utils.ts";
 
-export type AgentsPanel = "overview" | "files" | "tools" | "skills" | "channels" | "cron";
+// fork: heartbeat-status-rpc — added "heartbeat" panel
+export type AgentsPanel =
+  | "overview"
+  | "files"
+  | "tools"
+  | "skills"
+  | "channels"
+  | "cron"
+  | "heartbeat";
 
 export type ConfigState = {
   form: Record<string, unknown> | null;
@@ -106,6 +118,12 @@ export type AgentsProps = {
   onSetDefault: (agentId: string) => void;
   // fork: feature-model-overrides
   onFeatureModelChange: (agentId: string, feature: string, modelId: string | null) => void;
+  // fork: heartbeat-status-rpc
+  heartbeatLoading: boolean;
+  heartbeatError: string | null;
+  heartbeatStatus: HeartbeatStatusResult | null;
+  onHeartbeatRefresh: () => void;
+  onHeartbeatIntervalChange: (agentId: string, every: string) => void;
 };
 
 export function renderAgents(props: AgentsProps) {
@@ -344,6 +362,25 @@ export function renderAgents(props: AgentsProps) {
                       })
                     : nothing
                 }
+                ${
+                  // fork: heartbeat-status-rpc
+                  props.activePanel === "heartbeat"
+                    ? renderAgentHeartbeat({
+                        agentId: selectedAgent.id,
+                        heartbeatStatus: props.heartbeatStatus,
+                        heartbeatLoading: props.heartbeatLoading,
+                        heartbeatError: props.heartbeatError,
+                        configForm: props.configForm,
+                        configLoading: props.configLoading,
+                        configSaving: props.configSaving,
+                        configDirty: props.configDirty,
+                        onRefresh: props.onHeartbeatRefresh,
+                        onConfigReload: props.onConfigReload,
+                        onConfigSave: props.onConfigSave,
+                        onHeartbeatIntervalChange: props.onHeartbeatIntervalChange,
+                      })
+                    : nothing
+                }
               `
         }
       </section>
@@ -365,6 +402,7 @@ function renderAgentTabs(
     { id: "skills", label: "Skills" },
     { id: "channels", label: "Channels" },
     { id: "cron", label: "Cron Jobs" },
+    { id: "heartbeat", label: "Heartbeat" }, // fork: heartbeat-status-rpc
   ];
   return html`
     <div class="agent-tabs">

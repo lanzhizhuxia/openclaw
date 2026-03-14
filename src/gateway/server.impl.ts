@@ -752,6 +752,7 @@ export async function startGatewayServer(
     ? {
         stop: () => {},
         updateConfig: () => {},
+        getAgentStates: () => new Map(),
       }
     : startHeartbeatRunner({ cfg: cfgAtStart });
 
@@ -870,6 +871,8 @@ export async function startGatewayServer(
     markChannelLoggedOut,
     wizardRunner,
     broadcastVoiceWakeChanged,
+    // fork: heartbeat-status-rpc
+    heartbeatRunner,
   };
 
   // Store the gateway context as a fallback for plugin subagent dispatch

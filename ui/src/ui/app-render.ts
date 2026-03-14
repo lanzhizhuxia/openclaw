@@ -16,6 +16,12 @@ import {
 } from "./app-render.helpers.ts";
 import type { AppViewState } from "./app-view-state.ts";
 import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
+// fork: heartbeat-status-rpc
+import {
+  loadHeartbeatStatus,
+  startHeartbeatPolling,
+  stopHeartbeatPolling,
+} from "./controllers/agent-heartbeat.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
 import { loadAgents, loadToolsCatalog, saveAgentsConfig } from "./controllers/agents.ts";
@@ -919,6 +925,10 @@ export function renderApp(state: AppViewState) {
                     error: state.toolsCatalogError,
                     result: state.toolsCatalogResult,
                   },
+                  // fork: heartbeat-status-rpc
+                  heartbeatStatus: state.heartbeatStatus ?? null,
+                  heartbeatLoading: state.heartbeatLoading ?? false,
+                  heartbeatError: state.heartbeatError ?? null,
                   onRefresh: async () => {
                     await loadAgents(state);
                     const agentIds = state.agentsList?.agents?.map((entry) => entry.id) ?? [];
@@ -973,6 +983,10 @@ export function renderApp(state: AppViewState) {
                     if (state.agentsPanel === "skills") {
                       void loadAgentSkills(state, agentId);
                     }
+                    // fork: heartbeat-status-rpc
+                    if (state.agentsPanel === "heartbeat") {
+                      void loadHeartbeatStatus(state);
+                    }
                   },
                   onSelectPanel: (panel) => {
                     state.agentsPanel = panel;
@@ -1004,6 +1018,13 @@ export function renderApp(state: AppViewState) {
                     }
                     if (panel === "cron") {
                       void state.loadCron();
+                    }
+                    // fork: heartbeat-status-rpc
+                    if (panel === "heartbeat") {
+                      void loadHeartbeatStatus(state);
+                      startHeartbeatPolling(state);
+                    } else {
+                      stopHeartbeatPolling(state);
                     }
                   },
                   onLoadFiles: (agentId) => loadAgentFiles(state, agentId),
@@ -1270,7 +1291,25 @@ export function renderApp(state: AppViewState) {
                       }
                     }
                   },
-                }),
+                  // fork: heartbeat-status-rpc
+                  heartbeatLoading: state.heartbeatLoading,
+                  heartbeatError: state.heartbeatError,
+                  heartbeatStatus: state.heartbeatStatus,
+                  onHeartbeatRefresh: () => {
+                    void loadHeartbeatStatus(state);
+                  },
+                  onHeartbeatIntervalChange: (agentId, every) => {
+                    const index = ensureAgentIndex(agentId);
+                    if (index < 0) {
+                      return;
+                    }
+                    updateConfigFormValue(
+                      state,
+                      ["agents", "list", index, "heartbeat", "every"],
+                      every,
+                    );
+                  },
+                })
               )
             : nothing
         }

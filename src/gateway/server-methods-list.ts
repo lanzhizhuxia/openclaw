@@ -92,6 +92,8 @@ const BASE_METHODS = [
   "cron.run",
   "cron.runs",
   "gateway.identity.get",
+  // fork: heartbeat-status-rpc
+  "heartbeat.status",
   "system-presence",
   "system-event",
   "send",

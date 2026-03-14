@@ -162,7 +162,8 @@ export type AppViewState = {
   toolsCatalogLoading: boolean;
   toolsCatalogError: string | null;
   toolsCatalogResult: ToolsCatalogResult | null;
-  agentsPanel: "overview" | "files" | "tools" | "skills" | "channels" | "cron";
+  // fork: heartbeat-status-rpc — added "heartbeat" panel
+  agentsPanel: "overview" | "files" | "tools" | "skills" | "channels" | "cron" | "heartbeat";
   agentFilesLoading: boolean;
   agentFilesError: string | null;
   agentFilesList: AgentsFilesListResult | null;
@@ -177,6 +178,11 @@ export type AppViewState = {
   agentSkillsError: string | null;
   agentSkillsReport: SkillStatusReport | null;
   agentSkillsAgentId: string | null;
+  // fork: heartbeat-status-rpc
+  heartbeatLoading: boolean;
+  heartbeatError: string | null;
+  heartbeatStatus: import("./controllers/agent-heartbeat.ts").HeartbeatStatusResult | null;
+  heartbeatPollingTimer: ReturnType<typeof setInterval> | null;
   sessionsLoading: boolean;
   sessionsResult: SessionsListResult | null;
   sessionsError: string | null;

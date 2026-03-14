@@ -36,6 +36,7 @@ const hoisted = vi.hoisted(() => {
   const startHeartbeatRunner = vi.fn(() => ({
     stop: heartbeatStop,
     updateConfig: heartbeatUpdateConfig,
+    getAgentStates: () => new Map(), // fork: heartbeat-status-rpc
   }));
 
   const startGmailWatcher = vi.fn(async () => ({ started: true }));

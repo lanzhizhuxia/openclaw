@@ -5,6 +5,8 @@ export type HeartbeatEventPayload = {
   status: "sent" | "ok-empty" | "ok-token" | "skipped" | "failed";
   to?: string;
   accountId?: string;
+  // fork: heartbeat-status-rpc — agent that triggered this heartbeat
+  agentId?: string;
   preview?: string;
   durationMs?: number;
   hasMedia?: boolean;
