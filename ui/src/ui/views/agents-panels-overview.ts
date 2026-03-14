@@ -2,9 +2,12 @@ import { html, nothing } from "lit";
 import type { AgentIdentityResult, AgentsFilesListResult, AgentsListResult } from "../types.ts";
 import {
   buildModelOptions,
+  FEATURE_MODEL_SPECS,
   normalizeModelValue,
   parseFallbackList,
   resolveAgentConfig,
+  resolveFeatureDefaultsLabel,
+  resolveFeaturePerAgentValue,
   resolveModelFallbacks,
   resolveModelLabel,
   resolveModelPrimary,
@@ -28,6 +31,8 @@ export function renderAgentOverview(params: {
   onModelChange: (agentId: string, modelId: string | null) => void;
   onModelFallbacksChange: (agentId: string, fallbacks: string[]) => void;
   onSelectPanel: (panel: AgentsPanel) => void;
+  // fork: feature-model-overrides
+  onFeatureModelChange: (agentId: string, feature: string, modelId: string | null) => void;
 }) {
   const {
     agent,
@@ -42,6 +47,7 @@ export function renderAgentOverview(params: {
     onModelFallbacksChange,
     onSelectPanel,
   } = params;
+  const { onFeatureModelChange } = params;
   const config = resolveAgentConfig(configForm, agent.id);
   const workspaceFromFiles =
     agentFilesList && agentFilesList.agentId === agent.id ? agentFilesList.workspace : null;
@@ -176,6 +182,16 @@ export function renderAgentOverview(params: {
             </div>
           </div>
         </div>
+
+        ${renderFeatureModelOverrides({
+          agent,
+          configForm,
+          isDefault,
+          configLoading,
+          configSaving,
+          onFeatureModelChange,
+        })}
+
         <div class="agent-model-actions">
           <button type="button" class="btn btn--sm" ?disabled=${configLoading} @click=${onConfigReload}>
             Reload Config
@@ -191,5 +207,76 @@ export function renderAgentOverview(params: {
         </div>
       </div>
     </section>
+  `;
+}
+
+// fork: feature-model-overrides
+function renderFeatureModelOverrides(params: {
+  agent: AgentsListResult["agents"][number];
+  configForm: Record<string, unknown> | null;
+  isDefault: boolean;
+  configLoading: boolean;
+  configSaving: boolean;
+  onFeatureModelChange: (agentId: string, feature: string, modelId: string | null) => void;
+}) {
+  const { agent, configForm, isDefault, configLoading, configSaving, onFeatureModelChange } =
+    params;
+  const specs = isDefault
+    ? FEATURE_MODEL_SPECS
+    : FEATURE_MODEL_SPECS.filter((s) => s.perAgentPath !== null);
+
+  if (specs.length === 0) {
+    return nothing;
+  }
+
+  // Find agent index in config list for per-agent value lookups
+  const cfgList = (configForm as { agents?: { list?: Array<{ id?: string }> } } | null)?.agents
+    ?.list;
+  const agentIndex = Array.isArray(cfgList)
+    ? cfgList.findIndex((entry) => entry?.id === agent.id)
+    : -1;
+
+  const disabled = !configForm || configLoading || configSaving;
+
+  return html`
+    <details class="agent-feature-models">
+      <summary class="agent-feature-models__summary">Feature Model Overrides</summary>
+      <div class="row" style="gap: 12px; flex-wrap: wrap;">
+        ${specs.map((spec) => {
+          const defaultsLabel = resolveFeatureDefaultsLabel(configForm, spec);
+          // For default agent: show the defaults-level value as selected
+          // For non-default agent: show per-agent override if set
+          const currentValue = isDefault
+            ? defaultsLabel
+            : agentIndex >= 0
+              ? resolveFeaturePerAgentValue(configForm, spec, agentIndex)
+              : null;
+          const emptyLabel = isDefault
+            ? "Not set"
+            : defaultsLabel
+              ? `Inherit default (${defaultsLabel})`
+              : "Inherit default";
+
+          return html`
+            <label class="field" style="min-width: 220px; flex: 1;">
+              <span>${spec.label}</span>
+              <select
+                .value=${currentValue ?? ""}
+                ?disabled=${disabled}
+                @change=${(e: Event) =>
+                  onFeatureModelChange(
+                    agent.id,
+                    spec.key,
+                    (e.target as HTMLSelectElement).value || null,
+                  )}
+              >
+                <option value="">${emptyLabel}</option>
+                ${buildModelOptions(configForm, currentValue ?? undefined)}
+              </select>
+            </label>
+          `;
+        })}
+      </div>
+    </details>
   `;
 }

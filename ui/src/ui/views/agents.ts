@@ -104,6 +104,8 @@ export type AgentsProps = {
   onAgentSkillsClear: (agentId: string) => void;
   onAgentSkillsDisableAll: (agentId: string) => void;
   onSetDefault: (agentId: string) => void;
+  // fork: feature-model-overrides
+  onFeatureModelChange: (agentId: string, feature: string, modelId: string | null) => void;
 };
 
 export function renderAgents(props: AgentsProps) {
@@ -239,6 +241,7 @@ export function renderAgents(props: AgentsProps) {
                         onModelChange: props.onModelChange,
                         onModelFallbacksChange: props.onModelFallbacksChange,
                         onSelectPanel: props.onSelectPanel,
+                        onFeatureModelChange: props.onFeatureModelChange,
                       })
                     : nothing
                 }

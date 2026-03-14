@@ -171,11 +171,23 @@ type AgentConfigEntry = {
     alsoAllow?: string[];
     deny?: string[];
   };
+  // fork: feature-model-overrides
+  heartbeat?: { model?: string };
+  subagents?: { model?: unknown };
 };
 
 type ConfigSnapshot = {
   agents?: {
-    defaults?: { workspace?: string; model?: unknown; models?: Record<string, { alias?: string }> };
+    defaults?: {
+      workspace?: string;
+      model?: unknown;
+      models?: Record<string, { alias?: string }>;
+      // fork: feature-model-overrides
+      heartbeat?: { model?: string };
+      compaction?: { model?: string };
+      subagents?: { model?: unknown };
+      imageModel?: unknown;
+    };
     list?: AgentConfigEntry[];
   };
   tools?: {
@@ -673,4 +685,105 @@ export function matchesList(name: string, list?: string[]) {
 
 export function resolveToolProfile(profile: string) {
   return resolveToolProfilePolicy(profile) ?? undefined;
+}
+
+// fork: feature-model-overrides — specs and helpers for per-feature model selectors
+
+export type FeatureModelSpec = {
+  key: string;
+  label: string;
+  defaultsPath: (string | number)[];
+  perAgentPath: ((index: number) => (string | number)[]) | null;
+  isPlainString: boolean;
+};
+
+export const FEATURE_MODEL_SPECS: FeatureModelSpec[] = [
+  {
+    key: "heartbeat",
+    label: "Heartbeat",
+    defaultsPath: ["agents", "defaults", "heartbeat", "model"],
+    perAgentPath: (i) => ["agents", "list", i, "heartbeat", "model"],
+    isPlainString: true,
+  },
+  {
+    key: "compaction",
+    label: "Compaction / Summary",
+    defaultsPath: ["agents", "defaults", "compaction", "model"],
+    perAgentPath: null,
+    isPlainString: true,
+  },
+  {
+    key: "subagents",
+    label: "Sub-agents",
+    defaultsPath: ["agents", "defaults", "subagents", "model"],
+    perAgentPath: (i) => ["agents", "list", i, "subagents", "model"],
+    isPlainString: false,
+  },
+  {
+    key: "imageModel",
+    label: "Image Understanding",
+    defaultsPath: ["agents", "defaults", "imageModel"],
+    perAgentPath: null,
+    isPlainString: false,
+  },
+];
+
+/** Drill into a config object by path segments, returning the leaf value. */
+function getNestedValue(obj: unknown, path: (string | number)[]): unknown {
+  let current: unknown = obj;
+  for (const segment of path) {
+    if (current == null || typeof current !== "object") {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[String(segment)];
+  }
+  return current;
+}
+
+/** Resolve a feature model value from the config form, returning the primary model string or null. */
+export function resolveFeatureModelValue(
+  configForm: Record<string, unknown> | null,
+  spec: FeatureModelSpec,
+  agentIndex: number | null,
+  isDefault: boolean,
+): string | null {
+  if (!configForm) {
+    return null;
+  }
+  // per-agent path if applicable
+  if (!isDefault && spec.perAgentPath && agentIndex != null && agentIndex >= 0) {
+    const perValue = getNestedValue(configForm, spec.perAgentPath(agentIndex));
+    const primary = resolveModelPrimary(perValue);
+    if (primary) {
+      return primary;
+    }
+  }
+  // defaults path
+  const defaultsValue = getNestedValue(configForm, spec.defaultsPath);
+  return resolveModelPrimary(defaultsValue);
+}
+
+/** Resolve the defaults-level value for a feature (used for "Inherit default (xxx)" labels). */
+export function resolveFeatureDefaultsLabel(
+  configForm: Record<string, unknown> | null,
+  spec: FeatureModelSpec,
+): string | null {
+  if (!configForm) {
+    return null;
+  }
+  const raw = getNestedValue(configForm, spec.defaultsPath);
+  return resolveModelPrimary(raw);
+}
+
+/** Resolve the per-agent override value (without falling back to defaults). */
+export function resolveFeaturePerAgentValue(
+  configForm: Record<string, unknown> | null,
+  spec: FeatureModelSpec,
+  agentIndex: number,
+): string | null {
+  if (!configForm || !spec.perAgentPath) {
+    return null;
+  }
+  const raw = getNestedValue(configForm, spec.perAgentPath(agentIndex));
+  return resolveModelPrimary(raw);
 }

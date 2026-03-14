@@ -82,6 +82,7 @@ import { icons } from "./icons.ts";
 import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
 import { agentLogoUrl } from "./views/agents-utils.ts";
 import {
+  FEATURE_MODEL_SPECS,
   resolveAgentConfig,
   resolveConfiguredCronModelSuggestions,
   resolveEffectiveModelFallbacks,
@@ -1215,6 +1216,59 @@ export function renderApp(state: AppViewState) {
                       return;
                     }
                     updateConfigFormValue(state, ["agents", "defaultId"], agentId);
+                  },
+                  // fork: feature-model-overrides
+                  onFeatureModelChange: (agentId, feature, modelId) => {
+                    const spec = FEATURE_MODEL_SPECS.find((s) => s.key === feature);
+                    if (!spec) {
+                      return;
+                    }
+                    const isDefault = agentId === state.agentsList?.defaultId;
+
+                    if (isDefault || !spec.perAgentPath) {
+                      // Write to defaults path
+                      if (modelId) {
+                        updateConfigFormValue(state, spec.defaultsPath, modelId);
+                      } else {
+                        removeConfigFormValue(state, spec.defaultsPath);
+                      }
+                    } else {
+                      // Write to per-agent path
+                      const index = modelId ? ensureAgentIndex(agentId) : findAgentIndex(agentId);
+                      if (index < 0) {
+                        return;
+                      }
+                      const path = spec.perAgentPath(index);
+                      if (modelId) {
+                        if (!spec.isPlainString) {
+                          // AgentModelConfig: preserve existing fallbacks
+                          const list = (
+                            getCurrentConfigValue() as { agents?: { list?: unknown[] } } | null
+                          )?.agents?.list;
+                          const existing = Array.isArray(list)
+                            ? (list[index] as Record<string, unknown> | undefined)?.[spec.key]
+                            : undefined;
+                          if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                            const modelVal = (existing as Record<string, unknown>).model;
+                            if (
+                              modelVal &&
+                              typeof modelVal === "object" &&
+                              !Array.isArray(modelVal)
+                            ) {
+                              const fallbacks = (modelVal as Record<string, unknown>).fallbacks;
+                              updateConfigFormValue(state, path, {
+                                primary: modelId,
+                                ...(Array.isArray(fallbacks) ? { fallbacks } : {}),
+                              });
+                              return;
+                            }
+                          }
+                        }
+                        updateConfigFormValue(state, path, modelId);
+                      } else {
+                        removeConfigFormValue(state, path);
+                      }
+                    }
                   },
                 }),
               )

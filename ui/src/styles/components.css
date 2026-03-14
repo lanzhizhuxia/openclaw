@@ -3132,6 +3132,24 @@
   padding: 0;
 }
 
+/* fork: feature-model-overrides */
+.agent-feature-models {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--bg-elevated);
+  display: grid;
+  gap: 10px;
+}
+
+.agent-feature-models__summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .agent-model-meta {
   display: grid;
   gap: 6px;
