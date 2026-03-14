@@ -1,0 +1,30 @@
+# Dockerfile.qmd — Derivative image adding QMD memory backend
+# Build: docker build -t openclaw-base:local . && docker build -t openclaw-qmd:local -f Dockerfile.qmd .
+#
+# This file is fork-only. It does NOT modify the upstream Dockerfile.
+# See: docs/fork/FORK_PRINCIPLES.md
+
+ARG BASE_IMAGE=openclaw-base:local
+FROM ${BASE_IMAGE}
+
+USER root
+
+# x86_64 guard — QMD + node-llama-cpp native bindings are amd64 only
+RUN TARGETARCH="$(dpkg --print-architecture)"; \
+    if [ "$TARGETARCH" != "amd64" ]; then \
+      echo "ERROR: QMD is supported only on amd64 (got $TARGETARCH)" >&2; \
+      exit 1; \
+    fi
+
+# Install Bun runtime (required by QMD)
+ENV BUN_INSTALL=/opt/bun
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+RUN curl -fsSL https://bun.sh/install | bash && \
+    chmod -R a+rX /opt/bun
+
+# Install QMD globally via Bun
+RUN bun install -g https://github.com/tobi/qmd && \
+    qmd --version
+
+# Restore non-root user
+USER node

@@ -1,0 +1,21 @@
+# docker-compose.qmd.yml — QMD memory backend overlay (fork-only)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.qmd.yml up -d
+#
+# Prerequisite: build the QMD image first:
+#   docker build -t openclaw-base:local .
+#   docker build -t openclaw-qmd:local -f Dockerfile.qmd .
+#
+# See: docs/fork/issues/002-docker-qmd-memory-backend.md
+
+services:
+  openclaw-gateway:
+    image: openclaw-qmd:local
+    build:
+      context: .
+      dockerfile: Dockerfile.qmd
+      args:
+        BASE_IMAGE: ${OPENCLAW_IMAGE:-openclaw-base:local}
+    volumes:
+      ## QMD models and index data
+      ## Create dir first: mkdir -p ./data/qmd && sudo chown -R 1000:1000 ./data/qmd
+      - ${OPENCLAW_QMD_DIR:-./data/qmd}:/home/node/.qmd
