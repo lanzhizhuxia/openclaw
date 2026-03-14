@@ -30,20 +30,20 @@
 
 ## Gateway 部署方式对比：Docker vs 原生
 
-| 对比项 | Docker 部署 | 原生部署 (Node.js) |
-|--------|------------|-------------------|
-| **环境要求** | Docker + Docker Compose v2 | Node.js 22+, pnpm |
-| **安装复杂度** | 一条命令构建镜像 | 需安装 Node.js、pnpm、构建项目 |
-| **隔离性** | 容器隔离，不污染宿主系统 | 直接运行在宿主系统上 |
-| **沙箱支持** | 支持 Docker-in-Docker 沙箱 | 需要宿主安装 Docker（仅沙箱功能） |
-| **进程管理** | Docker Compose 自动重启 | 需自行配置 systemd / launchd |
-| **资源占用** | 镜像体积 ~1GB+，内存稍高 | 更轻量，适合低配 NAS |
-| **热重载** | 需重建容器或挂载源码 | 原生 `hybrid` 热重载 |
-| **调试便利性** | 需 `docker compose exec/logs` | 直接访问进程和文件 |
-| **文件权限** | 需注意 uid 1000 (node 用户) | 无额外权限问题 |
-| **升级方式** | 重新 build 或 pull 新镜像 | `git pull && pnpm install && pnpm build` |
-| **NAS 兼容性** | 群晖/威联通等均有 Docker 支持 | 需 NAS 支持 Node.js 22 |
-| **功能差异** | **无差异** — 完全相同的 Gateway 进程 | **无差异** |
+| 对比项         | Docker 部署                          | 原生部署 (Node.js)                       |
+| -------------- | ------------------------------------ | ---------------------------------------- |
+| **环境要求**   | Docker + Docker Compose v2           | Node.js 22+, pnpm                        |
+| **安装复杂度** | 一条命令构建镜像                     | 需安装 Node.js、pnpm、构建项目           |
+| **隔离性**     | 容器隔离，不污染宿主系统             | 直接运行在宿主系统上                     |
+| **沙箱支持**   | 支持 Docker-in-Docker 沙箱           | 需要宿主安装 Docker（仅沙箱功能）        |
+| **进程管理**   | Docker Compose 自动重启              | 需自行配置 systemd / launchd             |
+| **资源占用**   | 镜像体积 ~1GB+，内存稍高             | 更轻量，适合低配 NAS                     |
+| **热重载**     | 需重建容器或挂载源码                 | 原生 `hybrid` 热重载                     |
+| **调试便利性** | 需 `docker compose exec/logs`        | 直接访问进程和文件                       |
+| **文件权限**   | 需注意 uid 1000 (node 用户)          | 无额外权限问题                           |
+| **升级方式**   | 重新 build 或 pull 新镜像            | `git pull && pnpm install && pnpm build` |
+| **NAS 兼容性** | 群晖/威联通等均有 Docker 支持        | 需 NAS 支持 Node.js 22                   |
+| **功能差异**   | **无差异** — 完全相同的 Gateway 进程 | **无差异**                               |
 
 > **结论**：两种方式运行的是完全相同的 Gateway 代码，功能无任何差异。选择取决于你的运维偏好和 NAS 环境。
 >
@@ -63,6 +63,7 @@ cd openclaw
 ```
 
 要求：
+
 - Docker Engine + Docker Compose v2
 - 至少 2GB RAM（构建镜像时 pnpm install 需要）
 - 足够的磁盘空间存放镜像和日志
@@ -289,15 +290,15 @@ openclaw doctor                  # 诊断修复
 
 以下通道默认使用**出站连接**，Gateway 主动连接 IM 平台，**不需要对外暴露任何端口**：
 
-| 通道 | 传输方式 | 方向 | 需要暴露端口？ |
-|------|---------|------|--------------|
-| Telegram | HTTP 长轮询 (默认) | 出站 | 否 |
-| Discord | WebSocket | 出站 | 否 |
-| Slack | WebSocket Socket Mode (默认) | 出站 | 否 |
-| WhatsApp | WebSocket (Baileys) | 出站 | 否 |
-| Signal | SSE + JSON-RPC (本地) | 出站 | 否 |
-| Matrix | HTTP 长轮询 /sync | 出站 | 否 |
-| 飞书 | WebSocket (默认) | 出站 | 否 |
+| 通道     | 传输方式                     | 方向 | 需要暴露端口？ |
+| -------- | ---------------------------- | ---- | -------------- |
+| Telegram | HTTP 长轮询 (默认)           | 出站 | 否             |
+| Discord  | WebSocket                    | 出站 | 否             |
+| Slack    | WebSocket Socket Mode (默认) | 出站 | 否             |
+| WhatsApp | WebSocket (Baileys)          | 出站 | 否             |
+| Signal   | SSE + JSON-RPC (本地)        | 出站 | 否             |
+| Matrix   | HTTP 长轮询 /sync            | 出站 | 否             |
+| 飞书     | WebSocket (默认)             | 出站 | 否             |
 
 > 注意：部分通道支持 Webhook 入站模式（Telegram webhook 端口 8787、Slack HTTP 模式端口 18789、
 > 飞书 webhook 端口 3000 等），如需使用需额外暴露对应端口。**默认模式无需暴露。**
@@ -407,6 +408,7 @@ http://<NAS-IP>:18789
 ```
 
 首次访问：
+
 1. 在设置中输入 Gateway Token
 2. 审批浏览器设备配对
 
@@ -423,13 +425,13 @@ $CLI devices approve <requestId>
 
 ## 端口说明
 
-| 端口 | 用途 | 对局域网开放？ |
-|------|------|--------------|
-| **18789** | Gateway 主端口 (WebSocket + HTTP + Control UI) | **是（必须）** |
-| 18790 | Bridge（内部扩展/沙箱通信） | 否 |
-| 18791 | 浏览器控制服务器（内部） | 否 |
-| 18793 | Canvas 独立服务器（内部） | 否 |
-| 18800-18899 | Chromium CDP 端口（内部） | 否 |
+| 端口        | 用途                                           | 对局域网开放？ |
+| ----------- | ---------------------------------------------- | -------------- |
+| **18789**   | Gateway 主端口 (WebSocket + HTTP + Control UI) | **是（必须）** |
+| 18790       | Bridge（内部扩展/沙箱通信）                    | 否             |
+| 18791       | 浏览器控制服务器（内部）                       | 否             |
+| 18793       | Canvas 独立服务器（内部）                      | 否             |
+| 18800-18899 | Chromium CDP 端口（内部）                      | 否             |
 
 **NAS 防火墙只需对局域网网段开放 18789/TCP。**
 
@@ -465,13 +467,13 @@ openclaw node run \
 
 TLS 支持的能力：
 
-| 特性 | 说明 |
-|------|------|
-| 自签名证书 | 自动生成 RSA 2048，有效期 10 年 |
-| 自定义证书 | `gateway.tls.certPath` / `gateway.tls.keyPath` |
-| CA 证书 | `gateway.tls.caPath`（支持 mTLS） |
-| 最低版本 | 强制 TLSv1.3 |
-| 证书指纹锁定 | `--tls-fingerprint`（SHA-256） |
+| 特性         | 说明                                           |
+| ------------ | ---------------------------------------------- |
+| 自签名证书   | 自动生成 RSA 2048，有效期 10 年                |
+| 自定义证书   | `gateway.tls.certPath` / `gateway.tls.keyPath` |
+| CA 证书      | `gateway.tls.caPath`（支持 mTLS）              |
+| 最低版本     | 强制 TLSv1.3                                   |
+| 证书指纹锁定 | `--tls-fingerprint`（SHA-256）                 |
 
 ---
 
@@ -517,11 +519,11 @@ Gateway 配置 Trusted Proxy Auth 委托认证给 Cloudflare Access：
 
 需要对外暴露的端口：
 
-| 端口 | 条件 |
-|------|------|
-| 18789 (通过 Tunnel) | 必须 — Gateway 主端口 |
-| 8787 (通过 Tunnel) | 仅 Telegram Webhook 模式 |
-| 3000 (通过 Tunnel) | 仅飞书 Webhook 模式 |
+| 端口                | 条件                     |
+| ------------------- | ------------------------ |
+| 18789 (通过 Tunnel) | 必须 — Gateway 主端口    |
+| 8787 (通过 Tunnel)  | 仅 Telegram Webhook 模式 |
+| 3000 (通过 Tunnel)  | 仅飞书 Webhook 模式      |
 
 ---
 
@@ -548,31 +550,32 @@ Gateway 配置 Trusted Proxy Auth 委托认证给 Cloudflare Access：
 
 对于局域网部署，主要防护目标：
 
-| 威胁 | 说明 | 防护手段 |
-|------|------|---------|
-| **外网入侵** | 互联网上的攻击者访问 Gateway | 路由器 NAT + 不做端口转发 |
-| **局域网嗅探** | 同网段设备截获明文流量 | TLS 加密（可选） |
-| **暴力破解** | 猜测 Gateway Token | 强随机 token + 速率限制 |
-| **误暴露** | 路由器 UPnP 自动映射端口到公网 | 关闭 UPnP |
+| 威胁           | 说明                           | 防护手段                  |
+| -------------- | ------------------------------ | ------------------------- |
+| **外网入侵**   | 互联网上的攻击者访问 Gateway   | 路由器 NAT + 不做端口转发 |
+| **局域网嗅探** | 同网段设备截获明文流量         | TLS 加密（可选）          |
+| **暴力破解**   | 猜测 Gateway Token             | 强随机 token + 速率限制   |
+| **误暴露**     | 路由器 UPnP 自动映射端口到公网 | 关闭 UPnP                 |
 
 ### Gateway 端口暴露面分析
 
 端口 18789 是唯一需要开放的端口，其攻击面如下：
 
-| 端点 | 是否需要认证 | 泄露信息 | 风险 |
-|------|-------------|---------|------|
-| `/healthz` | 否 | Gateway 存活状态 | 低 |
-| `/readyz` | 否 | 就绪布尔值（无详情） | 低 |
-| Control UI 静态文件 | 否 | 助手名称、版本号 | 低 |
-| WebSocket 控制面 | **是** — 首帧需凭证 | 无（无凭证直接断开） | 中 |
-| `/v1/chat/completions` | **是** — Bearer Token | 无 | 高（认证后全权限） |
-| `/tools/invoke` | **是** — Bearer Token | 无 | 高（可执行命令） |
-| `/hooks/*` | **是** — Hook Token | 无 | 中 |
-| Canvas `/__openclaw__/` | **是** — 能力 Token | 无 | 中 |
+| 端点                    | 是否需要认证          | 泄露信息             | 风险               |
+| ----------------------- | --------------------- | -------------------- | ------------------ |
+| `/healthz`              | 否                    | Gateway 存活状态     | 低                 |
+| `/readyz`               | 否                    | 就绪布尔值（无详情） | 低                 |
+| Control UI 静态文件     | 否                    | 助手名称、版本号     | 低                 |
+| WebSocket 控制面        | **是** — 首帧需凭证   | 无（无凭证直接断开） | 中                 |
+| `/v1/chat/completions`  | **是** — Bearer Token | 无                   | 高（认证后全权限） |
+| `/tools/invoke`         | **是** — Bearer Token | 无                   | 高（可执行命令）   |
+| `/hooks/*`              | **是** — Hook Token   | 无                   | 中                 |
+| Canvas `/__openclaw__/` | **是** — 能力 Token   | 无                   | 中                 |
 
 **核心风险**：Token 一旦泄露，攻击者获得完整运营者权限（调用 AI、执行命令、收发消息）。
 
 Gateway 内置的暴力破解防护：
+
 - 每 IP 60 秒内最多 10 次失败尝试，之后锁定 5 分钟
 - 使用时序安全比较（timing-safe），防止时序侧信道攻击
 - 未提供凭证的连接（如浏览器直接打开）不消耗速率限制配额
@@ -582,6 +585,7 @@ Gateway 内置的暴力破解防护：
 #### 什么是 NAT？
 
 家用路由器默认使用 NAT（网络地址转换），局域网设备共享一个公网 IP。**外网无法主动访问局域网设备**，除非：
+
 - 手动配置了端口转发（Port Forwarding）
 - 开启了 UPnP/NAT-PMP（允许设备自动申请端口映射）
 - 使用了 DMZ（将某设备完全暴露到公网）
@@ -637,6 +641,7 @@ iptables -I DOCKER-USER -p tcp --dport 18789 ! -s 192.168.31.0/24 -j DROP
 ```
 
 群晖 DSM 图形界面：
+
 1. 控制面板 → 安全性 → 防火墙 → 启用
 2. 编辑规则 → 新增：
    - 端口：18789
@@ -705,16 +710,16 @@ OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1         # 局域网可信环境可用
 
 ## 故障排查
 
-| 症状 | 可能原因 | 解决方案 |
-|------|---------|---------|
-| `refusing to bind gateway ... without auth` | 非 loopback 绑定但未设置 token | 设置 `OPENCLAW_GATEWAY_TOKEN` |
-| `EADDRINUSE` | 端口被占用 | `openclaw gateway --force` 或更换端口 |
-| `Gateway start blocked: set gateway.mode=local` | 配置为 remote 模式 | `$CLI config set gateway.mode local` |
-| Node 连接 `unauthorized` | Token 不匹配 | 检查两端 token 是否一致 |
-| Node 连接 `pairing required` | 设备未审批 | `$CLI devices list` → `$CLI devices approve <id>` |
-| Control UI `disconnected (1008)` | 设备未配对或 token 错误 | `$CLI dashboard --no-open` 重新获取链接 |
-| Docker EACCES 权限错误 | 宿主目录 uid 不匹配 | `sudo chown -R 1000:1000 ~/.openclaw` |
-| `ws://` 连接被拒绝 | 未设置明文 WS 放行 | 设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` |
+| 症状                                            | 可能原因                       | 解决方案                                          |
+| ----------------------------------------------- | ------------------------------ | ------------------------------------------------- |
+| `refusing to bind gateway ... without auth`     | 非 loopback 绑定但未设置 token | 设置 `OPENCLAW_GATEWAY_TOKEN`                     |
+| `EADDRINUSE`                                    | 端口被占用                     | `openclaw gateway --force` 或更换端口             |
+| `Gateway start blocked: set gateway.mode=local` | 配置为 remote 模式             | `$CLI config set gateway.mode local`              |
+| Node 连接 `unauthorized`                        | Token 不匹配                   | 检查两端 token 是否一致                           |
+| Node 连接 `pairing required`                    | 设备未审批                     | `$CLI devices list` → `$CLI devices approve <id>` |
+| Control UI `disconnected (1008)`                | 设备未配对或 token 错误        | `$CLI dashboard --no-open` 重新获取链接           |
+| Docker EACCES 权限错误                          | 宿主目录 uid 不匹配            | `sudo chown -R 1000:1000 ~/.openclaw`             |
+| `ws://` 连接被拒绝                              | 未设置明文 WS 放行             | 设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`       |
 
 ---
 

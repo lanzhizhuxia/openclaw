@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-- Repo: https://github.com/openclaw/openclaw
+- Repo: https://github.com/lanzhizhuxia/openclaw (fork of OpenClaw)
 - In chat replies, file references must be repo-root relative only (example: `extensions/bluebubbles/src/channel.ts:80`); never absolute paths or `~/...`.
 - GitHub issues/comments/PR comments: use literal multiline strings or `-F - <<'EOF'` (or $'...') for real newlines; never embed "\\n".
 - GitHub comment footgun: never use `gh issue/pr comment -b "..."` when body contains backticks or shell chars. Always use single-quoted heredoc (`-F - <<'EOF'`) so no command substitution/escaping corruption.
@@ -335,3 +335,15 @@
   - `node --import tsx scripts/release-check.ts`
   - `pnpm release:check`
   - `pnpm test:install:smoke` or `OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT=1 pnpm test:install:smoke` for non-root smoke path.
+
+## Fork 二开 (lanzhizhuxia/openclaw)
+
+This repo (`lanzhizhuxia/openclaw`) is a personal fork (二开) of OpenClaw.
+
+- **Fork principles**: `docs/fork/FORK_PRINCIPLES.md` — MUST READ before implementing any issue.
+- **Core rule**: Prefer fork-only files (derivative Dockerfiles, compose overlays, new directories) over modifying upstream-maintained files. Minimize merge conflicts with upstream.
+- **Before modifying any upstream file**: Check recent change frequency (`git log --oneline -- <file>`), search for related upstream Issues/PRs, and evaluate if a fork-only file can achieve the same goal.
+- **Fork-only directories**: `docs/fork/`, `Dockerfile.*` (derivative), `docker-compose.*.yml` (overlays), `scripts/fork/`.
+- **Deployment context**: NAS (x86_64, Docker, Gateway) + Mac (Node) over LAN.
+- Full docs index: `docs/fork/README.md`.
+- Issues: https://github.com/lanzhizhuxia/openclaw/issues
