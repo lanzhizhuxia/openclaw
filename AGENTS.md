@@ -347,3 +347,14 @@ This repo (`lanzhizhuxia/openclaw`) is a personal fork (二开) of OpenClaw.
 - **Deployment context**: NAS (x86_64, Docker, Gateway) + Mac (Node) over LAN.
 - Full docs index: `docs/fork/README.md`.
 - Issues: https://github.com/lanzhizhuxia/openclaw/issues
+
+## NAS Dynamic Sandbox Configuration
+
+OpenClaw has been granted access to the NAS video directory (`/volume1/video`).
+
+- **NAS Path**: `/volume1/video`
+- **Container Path**: `/home/node/.openclaw/workspace/nas/video`
+- **Access Strategy**: "Dynamic Sandbox"
+  - Mount is read-write at the Docker level (`:rw`).
+  - OpenClaw default gateway config enforces read-only (`workspaceAccess: "ro"`).
+  - OpenClaw can dynamically elevate permissions when required via the CLI.
