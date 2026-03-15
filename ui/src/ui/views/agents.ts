@@ -11,9 +11,9 @@ import type {
   SkillStatusReport,
   ToolsCatalogResult,
 } from "../types.ts";
-import { renderAgentOverview } from "./agents-panels-overview.ts";
 // fork: heartbeat-status-rpc
 import { renderAgentHeartbeat } from "./agents-panel-heartbeat.ts";
+import { renderAgentOverview } from "./agents-panels-overview.ts";
 import {
   renderAgentFiles,
   renderAgentChannels,
@@ -370,10 +370,10 @@ export function renderAgents(props: AgentsProps) {
                         heartbeatStatus: props.heartbeatStatus,
                         heartbeatLoading: props.heartbeatLoading,
                         heartbeatError: props.heartbeatError,
-                        configForm: props.configForm,
-                        configLoading: props.configLoading,
-                        configSaving: props.configSaving,
-                        configDirty: props.configDirty,
+                        configForm: props.config.form,
+                        configLoading: props.config.loading,
+                        configSaving: props.config.saving,
+                        configDirty: props.config.dirty,
                         onRefresh: props.onHeartbeatRefresh,
                         onConfigReload: props.onConfigReload,
                         onConfigSave: props.onConfigSave,
