@@ -561,25 +561,47 @@ function resolveConfiguredModels(
   configForm: Record<string, unknown> | null,
 ): ConfiguredModelOption[] {
   const cfg = configForm as ConfigSnapshot | null;
-  const models = cfg?.agents?.defaults?.models;
-  if (!models || typeof models !== "object") {
-    return [];
-  }
+  const seen = new Set<string>();
   const options: ConfiguredModelOption[] = [];
-  for (const [modelId, modelRaw] of Object.entries(models)) {
-    const trimmed = modelId.trim();
-    if (!trimmed) {
-      continue;
+
+  const models = cfg?.agents?.defaults?.models;
+  if (models && typeof models === "object") {
+    for (const [modelId, modelRaw] of Object.entries(models)) {
+      const trimmed = modelId.trim();
+      if (!trimmed || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      const alias =
+        modelRaw && typeof modelRaw === "object" && "alias" in modelRaw
+          ? typeof (modelRaw as { alias?: unknown }).alias === "string"
+            ? (modelRaw as { alias?: string }).alias?.trim()
+            : undefined
+          : undefined;
+      const label = alias && alias !== trimmed ? `${alias} (${trimmed})` : trimmed;
+      options.push({ value: trimmed, label });
     }
-    const alias =
-      modelRaw && typeof modelRaw === "object" && "alias" in modelRaw
-        ? typeof (modelRaw as { alias?: unknown }).alias === "string"
-          ? (modelRaw as { alias?: string }).alias?.trim()
-          : undefined
-        : undefined;
-    const label = alias && alias !== trimmed ? `${alias} (${trimmed})` : trimmed;
-    options.push({ value: trimmed, label });
   }
+
+  const defaultModel = cfg?.agents?.defaults?.model;
+  if (defaultModel) {
+    const primary = resolveModelPrimary(defaultModel);
+    if (primary && !seen.has(primary)) {
+      seen.add(primary);
+      options.push({ value: primary, label: primary });
+    }
+    const fallbacks = resolveModelFallbacks(defaultModel);
+    if (fallbacks) {
+      for (const fb of fallbacks) {
+        const trimmed = fb.trim();
+        if (trimmed && !seen.has(trimmed)) {
+          seen.add(trimmed);
+          options.push({ value: trimmed, label: trimmed });
+        }
+      }
+    }
+  }
+
   return options;
 }
 
@@ -590,12 +612,7 @@ export function buildModelOptions(
   const options = resolveConfiguredModels(configForm);
   const hasCurrent = current ? options.some((option) => option.value === current) : false;
   if (current && !hasCurrent) {
-    options.unshift({ value: current, label: `Current (${current})` });
-  }
-  if (options.length === 0) {
-    return html`
-      <option value="" disabled>No configured models</option>
-    `;
+    options.unshift({ value: current, label: current });
   }
   return options.map((option) => html`<option value=${option.value}>${option.label}</option>`);
 }
