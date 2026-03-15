@@ -133,12 +133,36 @@ docker compose run --rm openclaw-cli onboard --mode local --no-install-daemon
 docker compose up -d openclaw-gateway
 ```
 
-**方式三：使用预构建镜像（跳过本地构建）**
+**方式三：使用 Fork 预构建镜像（推荐）**
+
+每次 push 到 fork 的 `main` 分支，GitHub Actions 自动构建并推送 amd64 镜像到 `ghcr.io/lanzhizhuxia/openclaw`。
+
+```bash
+# 使用不可变 tag（推荐生产环境）
+export OPENCLAW_IMAGE="ghcr.io/lanzhizhuxia/openclaw:fork-2026.3.14-e51b989"
+
+# 或使用滚动 tag（仅测试）
+# export OPENCLAW_IMAGE="ghcr.io/lanzhizhuxia/openclaw:fork-latest"
+
+# 然后启动
+./docker-setup.sh
+```
+
+Tag 命名规则：
+
+- 不可变：`fork-<version>-<7位短 SHA>`，如 `fork-2026.3.14-e51b989`
+- 滚动：`fork-latest`（每次 push 到 main 自动更新）
+
+CI/CD 工作流：`.github/workflows/fork-docker-release.yml`
+
+**方式四：使用上游官方镜像（不含 fork 自定义功能）**
 
 ```bash
 export OPENCLAW_IMAGE="ghcr.io/openclaw/openclaw:latest"
 ./docker-setup.sh
 ```
+
+> 注意：官方镜像不包含 fork 的 UI 增强功能（模型选择器、心跳面板等）。
 
 ### A.4 验证
 
@@ -174,6 +198,28 @@ docker compose run --rm openclaw-cli devices list
 docker compose run --rm openclaw-cli nodes status
 docker compose run --rm openclaw-cli config get gateway
 ```
+
+### A.6 Fork 镜像升级流程
+
+当 fork 代码更新后（upstream sync 或新功能），CI 自动构建新镜像。NAS 升级步骤：
+
+```bash
+# 1. 更新 .env 中的镜像 tag（替换为新的不可变 tag）
+# 查看最新 tag: https://github.com/lanzhizhuxia/openclaw/actions/workflows/fork-docker-release.yml
+sed -i 's|OPENCLAW_IMAGE=.*|OPENCLAW_IMAGE=ghcr.io/lanzhizhuxia/openclaw:fork-<新version>-<新sha>|' .env
+
+# 2. 拉取新镜像
+docker-compose pull
+
+# 3. 重启容器（自动使用新镜像）
+docker-compose up -d
+
+# 4. 验证
+curl -fsS http://127.0.0.1:18789/healthz
+docker-compose exec openclaw-gateway node -e "console.log(require('./package.json').version)"
+```
+
+回滚：将 `.env` 中的 tag 改回上一个版本，重新 `docker-compose pull && docker-compose up -d`。
 
 ---
 
@@ -401,22 +447,24 @@ $CLI config set tools.exec.node "My Mac"
 
 ## 访问 Control UI
 
-局域网内浏览器访问：
+局域网内浏览器访问（需在 URL fragment 中带上 token）：
 
 ```
-http://<NAS-IP>:18789
+http://<NAS-IP>:<端口>/#token=<OPENCLAW_GATEWAY_TOKEN>
 ```
 
-首次访问：
+例如：
 
-1. 在设置中输入 Gateway Token
-2. 审批浏览器设备配对
+```
+http://192.168.31.171:41789/#token=959848b0300827f436602d7edfa0358468406dcc34e03ef5631e34c9c29b978f
+```
+
+> **重要**：token 必须放在 URL 的 `#token=...` fragment 中，而不是 query string。没有 token 会报 "device identity required" 错误。
+> 也可以用 CLI 获取完整链接：`$CLI dashboard --no-open`
+
+首次访问可能还需审批浏览器设备配对：
 
 ```bash
-# 获取 dashboard 链接
-$CLI dashboard --no-open
-
-# 审批浏览器设备
 $CLI devices list
 $CLI devices approve <requestId>
 ```

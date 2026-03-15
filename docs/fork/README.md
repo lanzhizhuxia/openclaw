@@ -34,7 +34,7 @@ fork/
 
 ### deployment/
 
-- [lan-nas-mac.md](deployment/lan-nas-mac.md) - NAS + Mac 局域网部署指南
+- [lan-nas-mac.md](deployment/lan-nas-mac.md) - NAS + Mac 局域网部署指南（含 fork 镜像升级流程）
 
 ### architecture/
 

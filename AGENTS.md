@@ -343,10 +343,31 @@ This repo (`lanzhizhuxia/openclaw`) is a personal fork (二开) of OpenClaw.
 - **Fork principles**: `docs/fork/FORK_PRINCIPLES.md` — MUST READ before implementing any issue.
 - **Core rule**: Prefer fork-only files (derivative Dockerfiles, compose overlays, new directories) over modifying upstream-maintained files. Minimize merge conflicts with upstream.
 - **Before modifying any upstream file**: Check recent change frequency (`git log --oneline -- <file>`), search for related upstream Issues/PRs, and evaluate if a fork-only file can achieve the same goal.
-- **Fork-only directories**: `docs/fork/`, `Dockerfile.*` (derivative), `docker-compose.*.yml` (overlays), `scripts/fork/`.
+- **Fork-only directories**: `docs/fork/`, `Dockerfile.*` (derivative), `docker-compose.*.yml` (overlays), `scripts/fork/`, `.github/workflows/fork-*.yml`.
 - **Deployment context**: NAS (x86_64, Docker, Gateway) + Mac (Node) over LAN.
 - Full docs index: `docs/fork/README.md`.
 - Issues: https://github.com/lanzhizhuxia/openclaw/issues
+
+### Fork Docker Image
+
+- **Registry**: `ghcr.io/lanzhizhuxia/openclaw`
+- **CI/CD**: `.github/workflows/fork-docker-release.yml` — builds amd64 image on every push to `main`, pushes to ghcr.io.
+- **Tag strategy**:
+  - Immutable: `fork-<version>-<shortsha>` (e.g. `fork-2026.3.14-e51b989`) — use in production.
+  - Rolling: `fork-latest` — for testing only.
+- **NAS runs the fork image**, not upstream's official image. The fork image includes custom UI features (per-feature model overrides, heartbeat panel) that require compiled code.
+- **NAS update workflow**: update `.env` `OPENCLAW_IMAGE` tag → `docker-compose pull` → `docker-compose up -d`.
+
+### Upstream Sync
+
+- **Strategy**: `git fetch upstream && git rebase upstream/main` — keep fork commits on top of upstream.
+- **Cadence**: Weekly sync + immediate sync for security/critical upstream fixes.
+- **High-conflict files** (fork touches these; upstream changes them frequently):
+  - `ui/src/ui/app-render.ts`
+  - `ui/src/ui/views/agents.ts`
+  - `ui/src/ui/views/agents-utils.ts`
+- **After rebase**: `pnpm build` to verify, then `git push --force-with-lease` via SSH (HTTPS may fail on workflow file scope). Push triggers CI to auto-build new image.
+- **Backup branch**: create `backup-pre-rebase-YYYYMMDD` before each rebase.
 
 ## NAS Dynamic Sandbox Configuration
 
