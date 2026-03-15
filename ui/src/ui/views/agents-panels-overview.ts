@@ -128,17 +128,23 @@ export function renderAgentOverview(params: {
         <div class="agent-model-fields">
           <label class="field">
             <span>Primary model${isDefault ? " (default)" : ""}</span>
-            <datalist id="primary-model-list-${agent.id}">
-              ${buildModelOptions(configForm, effectivePrimary ?? undefined)}
-            </datalist>
-            <input
-              list="primary-model-list-${agent.id}"
+            <select
               .value=${isDefault ? (effectivePrimary ?? "") : (entryPrimary ?? "")}
               ?disabled=${disabled}
-              placeholder=${isDefault ? "provider/model" : defaultPrimary ? `Inherit default (${defaultPrimary})` : "Inherit default"}
               @change=${(e: Event) =>
-                onModelChange(agent.id, (e.target as HTMLInputElement).value.trim() || null)}
-            />
+                onModelChange(agent.id, (e.target as HTMLSelectElement).value || null)}
+            >
+              ${
+                isDefault
+                  ? nothing
+                  : html`
+                      <option value="">
+                        ${defaultPrimary ? `Inherit default (${defaultPrimary})` : "Inherit default"}
+                      </option>
+                    `
+              }
+              ${buildModelOptions(configForm, effectivePrimary ?? undefined)}
+            </select>
           </label>
           <div class="field">
             <span>Fallbacks</span>
@@ -162,7 +168,11 @@ export function renderAgentOverview(params: {
                   </span>
                 `,
               )}
+              <datalist id="fallback-model-list-${agent.id}">
+                ${buildModelOptions(configForm)}
+              </datalist>
               <input
+                list="fallback-model-list-${agent.id}"
                 ?disabled=${disabled}
                 placeholder=${fallbackChips.length === 0 ? "provider/model" : ""}
                 @keydown=${handleChipKeydown}
@@ -256,21 +266,19 @@ function renderFeatureModelOverrides(params: {
           return html`
             <label class="field" style="min-width: 220px; flex: 1;">
               <span>${spec.label}</span>
-              <datalist id="feature-model-list-${agent.id}-${spec.key}">
-                ${buildModelOptions(configForm, currentValue ?? undefined)}
-              </datalist>
-              <input
-                list="feature-model-list-${agent.id}-${spec.key}"
+              <select
                 .value=${currentValue ?? ""}
                 ?disabled=${disabled}
-                placeholder=${emptyLabel}
                 @change=${(e: Event) =>
                   onFeatureModelChange(
                     agent.id,
                     spec.key,
-                    (e.target as HTMLInputElement).value.trim() || null,
+                    (e.target as HTMLSelectElement).value || null,
                   )}
-              />
+              >
+                <option value="">${emptyLabel}</option>
+                ${buildModelOptions(configForm, currentValue ?? undefined)}
+              </select>
             </label>
           `;
         })}
