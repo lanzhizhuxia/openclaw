@@ -62,11 +62,13 @@ export function renderAgentOverview(params: {
     resolveModelPrimary(config.defaults?.model) ||
     (defaultModel !== "-" ? normalizeModelValue(defaultModel) : null);
   const effectivePrimary = entryPrimary ?? defaultPrimary ?? null;
-  const modelFallbacks = resolveModelFallbacks(config.entry?.model);
+  const isDefault = Boolean(params.defaultId && agent.id === params.defaultId);
+  const modelFallbacks =
+    resolveModelFallbacks(config.entry?.model) ??
+    (isDefault ? resolveModelFallbacks(config.defaults?.model) : null);
   const fallbackChips = modelFallbacks ?? [];
   const skillFilter = Array.isArray(config.entry?.skills) ? config.entry?.skills : null;
   const skillCount = skillFilter?.length ?? null;
-  const isDefault = Boolean(params.defaultId && agent.id === params.defaultId);
   const disabled = !configForm || configLoading || configSaving;
 
   const removeChip = (index: number) => {

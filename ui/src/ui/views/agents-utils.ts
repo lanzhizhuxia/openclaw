@@ -176,7 +176,19 @@ type AgentConfigEntry = {
   subagents?: { model?: unknown };
 };
 
+type ProviderModelEntry = {
+  id?: string;
+  name?: string;
+};
+
+type ProviderConfig = {
+  models?: ProviderModelEntry[];
+};
+
 type ConfigSnapshot = {
+  models?: {
+    providers?: Record<string, ProviderConfig>;
+  };
   agents?: {
     defaults?: {
       workspace?: string;
@@ -598,6 +610,27 @@ function resolveConfiguredModels(
           seen.add(trimmed);
           options.push({ value: trimmed, label: trimmed });
         }
+      }
+    }
+  }
+
+  const providers = cfg?.models?.providers;
+  if (providers && typeof providers === "object") {
+    for (const [providerName, provider] of Object.entries(providers)) {
+      if (!provider || !Array.isArray(provider.models)) {
+        continue;
+      }
+      for (const entry of provider.models) {
+        if (!entry || typeof entry.id !== "string") {
+          continue;
+        }
+        const qualifiedId = `${providerName}/${entry.id}`;
+        if (seen.has(qualifiedId)) {
+          continue;
+        }
+        seen.add(qualifiedId);
+        const label = entry.name ? `${entry.name} (${qualifiedId})` : qualifiedId;
+        options.push({ value: qualifiedId, label });
       }
     }
   }
