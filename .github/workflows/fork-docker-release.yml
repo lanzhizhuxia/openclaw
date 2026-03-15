@@ -1,0 +1,122 @@
+# Fork-specific Docker image build and push.
+# Builds amd64-only (NAS target) and pushes to ghcr.io/lanzhizhuxia/openclaw.
+#
+# Tag strategy:
+#   On push to main:  fork-latest, fork-<version>-<shortsha>
+#   On workflow_dispatch: fork-<version>-<shortsha> only
+#
+# This is a fork-only file — upstream does not have it.
+
+name: "Fork: Docker Release"
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.mdx"
+      - ".agents/**"
+      - "skills/**"
+  workflow_dispatch:
+    inputs:
+      tag_suffix:
+        description: "Optional tag suffix (e.g. 'rc1'). Leave empty for default."
+        required: false
+        type: string
+
+concurrency:
+  group: fork-docker-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lanzhizhuxia/openclaw
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tags
+        id: tags
+        shell: bash
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          TAG_SUFFIX: ${{ inputs.tag_suffix || '' }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          short_sha="$(git rev-parse --short=7 HEAD)"
+          tags=()
+
+          if [ -n "$TAG_SUFFIX" ]; then
+            tags+=("${IMAGE}:fork-${version}-${TAG_SUFFIX}")
+          else
+            tags+=("${IMAGE}:fork-${version}-${short_sha}")
+          fi
+
+          # Rolling tag only on push to main (not manual dispatch)
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            tags+=("${IMAGE}:fork-latest")
+          fi
+
+          {
+            echo "value<<EOF"
+            printf "%s\n" "${tags[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "### 🐳 Docker Tags" >> "$GITHUB_STEP_SUMMARY"
+          for tag in "${tags[@]}"; do
+            echo "- \`${tag}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Resolve OCI labels
+        id: labels
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          source_sha="$(git rev-parse HEAD)"
+          {
+            echo "value<<EOF"
+            echo "org.opencontainers.image.source=https://github.com/lanzhizhuxia/openclaw"
+            echo "org.opencontainers.image.version=${version}"
+            echo "org.opencontainers.image.revision=${source_sha}"
+            echo "org.opencontainers.image.created=${created}"
+            echo "org.opencontainers.image.title=OpenClaw (fork)"
+            echo "org.opencontainers.image.description=OpenClaw fork with custom UI features (model overrides, heartbeat)"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          tags: ${{ steps.tags.outputs.value }}
+          labels: ${{ steps.labels.outputs.value }}
+          provenance: false
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
